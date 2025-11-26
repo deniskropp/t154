@@ -1,0 +1,5 @@
+{
+  "name": "T20-MAS Client",
+  "description": "A client-side Multi-Agent System simulator leveraging Gemini to orchestrate plans, delegate tasks, and execute workflows without a backend.",
+  "requestFramePermissions": []
+}
