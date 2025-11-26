@@ -269,7 +269,7 @@ export const executeTask = async (
         config: {
           systemInstruction: [
             SESSION_SYSTEM_PROMPT,
-            agent.system_prompt
+            agent.system_prompt ?? ''
           ],
           responseMimeType: "application/json",
           responseSchema: agentOutputSchema,
