@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Plan, AgentOutput, File } from "../types";
-import { SESSION_SYSTEM_PROMPT, ORCHESTRATOR_SYSTEM_PROMPT, AGENT_SYSTEM_PROMPT_TEMPLATE } from "./prompts";
+import { SESSION_SYSTEM_PROMPT, SESSION_PLANNING_PROMPT_TEMPLATE, ORCHESTRATOR_SYSTEM_PROMPT, AGENT_SYSTEM_PROMPT_TEMPLATE } from "./prompts";
 
 const apiKey = process.env.API_KEY || '';
 const genAI = new GoogleGenAI({ apiKey });
@@ -212,17 +212,15 @@ export const generatePlan = async (goal: string, files: File[] = []): Promise<Pl
   if (!apiKey) throw new Error("API Key not found");
 
   const model = "gemini-2.5-flash-lite";
-  
-  let userPrompt = `High Level Goal: ${goal}\n\n`;
-  if (files.length > 0) {
-    userPrompt += `Initial Files:\n${files.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}`;
-  }
+
+  let sessionPlanningPrompt = SESSION_PLANNING_PROMPT_TEMPLATE
+    .replace('{high_level_goal}', goal);
 
   return callWithRetry(async () => {
     try {
       const response = await genAI.models.generateContent({
         model,
-        contents: userPrompt,
+        contents: [ sessionPlanningPrompt, `Initial Files:\n${files.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}` ],
         config: {
           systemInstruction: [
             SESSION_SYSTEM_PROMPT,
@@ -255,7 +253,7 @@ export const executeTask = async (
 
   const model = "gemini-2.5-flash-lite";
 
-  const systemPrompt = AGENT_SYSTEM_PROMPT_TEMPLATE
+  const agentPrompt = AGENT_SYSTEM_PROMPT_TEMPLATE
     .replace('{name}', agent.name)
     .replace('{role}', agent.role)
     .replace('{goal}', agent.goal)
@@ -267,11 +265,11 @@ export const executeTask = async (
     try {
       const response = await genAI.models.generateContent({
         model,
-        contents: [ agent.system_prompt, `Execute task: ${task.id} - ${task.description}` ],
+        contents: [ agentPrompt ],
         config: {
           systemInstruction: [
             SESSION_SYSTEM_PROMPT,
-            systemPrompt
+            agent.system_prompt
           ],
           responseMimeType: "application/json",
           responseSchema: agentOutputSchema,
